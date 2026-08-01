@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(21, 30, 49, 0.7);
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            --accent-hover: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --error-color: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Светящиеся эффекты на фоне */
+        .glow {
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            background: var(--accent-gradient);
+            filter: blur(150px);
+            border-radius: 50%;
+            opacity: 0.22;
+            z-index: 0;
+        }
+
+        .glow-1 { top: -100px; left: -100px; }
+        .glow-2 { bottom: -100px; right: -100px; }
+
+        /* Карточка */
+        .card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 520px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 36px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-align: center;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        @media (min-width: 480px) {
+            .input-group {
+                flex-direction: row;
+            }
+        }
+
+        input[type="url"] {
+            flex: 1;
+            padding: 14px 18px;
+            background: rgba(11, 15, 25, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+
+        input[type="url"]::placeholder {
+            color: #64748b;
+        }
+
+        input[type="url"]:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        button.btn-main {
+            padding: 14px 24px;
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        button.btn-main:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+        }
+
+        button.btn-main:active {
+            transform: translateY(0);
+        }
+
+        /* Блок ошибки */
+        .error-message {
+            color: var(--error-color);
+            background-color: var(--error-bg);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            display: none;
+            margin-top: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        /* Блок результата */
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(11, 15, 25, 0.5);
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-box.active {
+            display: block;
+        }
+
+        .short-url-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .short-url-container span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .short-url-container a {
+            color: #818cf8;
+            font-weight: 600;
+            font-size: 1.05rem;
+            text-decoration: none;
+            word-break: break-all;
+            transition: color 0.2s;
+        }
+
+        .short-url-container a:hover {
+            color: #a5b4fc;
+            text-decoration: underline;
+        }
+
+        /* Статистика и клики */
+        .stats-box {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border-top: 1px dashed var(--border-color);
+            padding-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-box strong {
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .btn-sub {
+            padding: 8px 14px !important;
+            font-size: 0.8rem !important;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-sub:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="card">
+    <h1>Сокращение ссылок</h1>
+
+    <div class="input-group">
+        <input type="url" id="originalUrl" placeholder="Вставьте длинную ссылку..." required>
+        <button class="btn-main" onclick="shortenUrl()">Сократить</button>
+    </div>
+
+    <!-- Блок ошибки -->
+    <div id="errorBox" class="error-message"></div>
+
+    <!-- Блок результата -->
+    <div id="resultBox" class="result-box">
+        <div class="short-url-container">
+            <span>Короткая ссылка</span>
+            <a id="shortLink" href="#" target="_blank"></a>
+        </div>
+        <div class="stats-box">
+            <span>Переходов: <strong id="clickCount">0</strong></span>
+            <button class="btn-sub" onclick="fetchStats()">Обновить клики</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentShortCode = '';
+
+    // 1. Запрос на создание короткой ссылки
+    async function shortenUrl() {
+        const input = document.getElementById('originalUrl');
+        const urlValue = input.value.trim();
+        const errorBox = document.getElementById('errorBox');
+        const resultBox = document.getElementById('resultBox');
+
+        // Сбрасываем отображение
+        errorBox.classList.remove('active');
+        resultBox.classList.remove('active');
+
+        if (!urlValue) {
+            showError("Пожалуйста, введите URL");
+            return;
+        }
+
+        try {
+            // КУДА ИДЁТ ЗАПРОС: http://localhost:8080/api/links
+            // МЕТОД: POST
+            // ТЕЛО: {"originalUrl": "..."}
+            const response = await fetch('http://localhost:8080/api/links', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ originalUrl: urlValue })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Если статус 400 Bad Request (например, невалидный URL)
+                throw new Error(data.error || "Произошла ошибка при сокращении");
+            }
+
+            // ЧТО ДЕЛАЕТ КОД С ОТВЕТОМ:
+            // Сохраняем полученный shortCode и формируем ссылку
+            currentShortCode = data.shortCode;
+            const fullShortUrl = `http://localhost:8080/${data.shortCode}`;
+
+            const linkElement = document.getElementById('shortLink');
+            linkElement.href = fullShortUrl;
+            linkElement.textContent = fullShortUrl;
+
+            document.getElementById('clickCount').textContent = data.clickCount ?? data.clicks ?? 0;
+            resultBox.classList.add('active');
+
+        } catch (err) {
+            showError(err.message);
+        }
+    }
+
+    // 2. Запрос на получение статистики кликов
+    async function fetchStats() {
+        if (!currentShortCode) return;
+
+        try {
+            // КУДА ИДЁТ ЗАПРОС: http://localhost:8080/api/links/{shortCode}/stats
+            // МЕТОД: GET
+            const response = await fetch(`http://localhost:8080/api/links/${currentShortCode}/stats`);
+            const data = await response.json();
+
+            if (response.ok) {
+                // Обновляем кол-во кликов на странице
+                document.getElementById('clickCount').textContent = data.clickCount ?? data.clicks ?? 0;
+            }
+        } catch (err) {
+            console.error("Не удалось обновить статистику", err);
+        }
+    }
+
+    function showError(message) {
+        const errorBox = document.getElementById('errorBox');
+        errorBox.textContent = message;
+        errorBox.classList.add('active');
+    }
+</script>
+
+</body>
+</html>

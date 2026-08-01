@@ -11,13 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/links")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class LinkController {
 
     private final LinkService linkService;
 
-    @PostMapping
+    @PostMapping("/api/links")
     public ResponseEntity<LinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
         LinkResponse response = linkService.createLink(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -31,7 +31,7 @@ public class LinkController {
                 .build();
     }
 
-    @GetMapping("/{shortCode}/stats")
+    @GetMapping("/api/links/{shortCode}/stats")
     public ResponseEntity<LinkResponse> getStats(@PathVariable String shortCode) {
         LinkResponse response = linkService.getStats(shortCode);
         return ResponseEntity.ok(response);
