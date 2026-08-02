@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shortener-db
+    environment:
+      POSTGRES_DB: shortener_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: REMOVED_SECRET
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d shortener_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  shortener-service:
+    build: .
+    container_name: shortener-app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: shortener_db
+      DB_USER: postgres
+      DB_PASSWORD: REMOVED_SECRET
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
