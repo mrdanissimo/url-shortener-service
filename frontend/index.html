@@ -302,8 +302,6 @@
                 throw new Error(data.error || "Произошла ошибка при сокращении");
             }
 
-            // ЧТО ДЕЛАЕТ КОД С ОТВЕТОМ:
-            // Сохраняем полученный shortCode и формируем ссылку
             currentShortCode = data.shortCode;
             const fullShortUrl = `http://localhost:8080/${data.shortCode}`;
 
