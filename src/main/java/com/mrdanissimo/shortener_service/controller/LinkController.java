@@ -3,6 +3,8 @@ package com.mrdanissimo.shortener_service.controller;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.service.LinkService;
+import com.mrdanissimo.shortener_service.service.RateLimitService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -25,9 +27,12 @@ public class LinkController {
 
     @GetMapping("/{shortCode}")
     public ResponseEntity<Void> redirect(@PathVariable String shortCode) {
-        String originalUrl = linkService.redirect(shortCode);
+        LinkResponse link = linkService.getLinkInfo(shortCode);
+
+        linkService.incrementClicks(shortCode);
+
         return ResponseEntity.status(HttpStatus.FOUND)
-                .header(HttpHeaders.LOCATION, originalUrl)
+                .header(HttpHeaders.LOCATION, link.getOriginalUrl())
                 .build();
     }
 
@@ -37,4 +42,15 @@ public class LinkController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/api/links/{shortCode}")
+    public ResponseEntity<LinkResponse> getLinkInfo(@PathVariable String shortCode) {
+        LinkResponse response = linkService.getLinkInfo(shortCode);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/api/links/{shortCode}")
+    public ResponseEntity<Void> deleteLink(@PathVariable String shortCode) {
+        linkService.deleteLink(shortCode);
+        return ResponseEntity.noContent().build();
+    }
 }
