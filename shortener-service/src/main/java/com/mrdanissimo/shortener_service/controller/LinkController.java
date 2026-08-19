@@ -1,10 +1,10 @@
 package com.mrdanissimo.shortener_service.controller;
 
+import com.mrdanissimo.shortener_service.client.AnalyticsClient;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
+import com.mrdanissimo.shortener_service.dto.LinkAnalyticsResponse;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.service.LinkService;
-import com.mrdanissimo.shortener_service.service.RateLimitService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class LinkController {
 
     private final LinkService linkService;
+    private final AnalyticsClient analyticsClient;
 
     @PostMapping("/api/links")
     public ResponseEntity<LinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
@@ -55,4 +56,11 @@ public class LinkController {
         linkService.deleteLink(shortCode);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/api/links/{shortCode}/analytics")
+    public ResponseEntity<LinkAnalyticsResponse> getDetailedAnalytics(@PathVariable String shortCode) {
+        LinkAnalyticsResponse response = analyticsClient.getAnalytics(shortCode);
+        return ResponseEntity.ok(response);
+    }
+
 }

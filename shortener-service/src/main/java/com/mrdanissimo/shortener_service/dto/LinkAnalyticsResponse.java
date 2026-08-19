@@ -1,4 +1,6 @@
 package com.mrdanissimo.shortener_service.dto;
 
-public class LinkAnalyticsResponse {
-}
+public record LinkAnalyticsResponse(
+        String shortCode,
+        long totalClicks
+) {}
