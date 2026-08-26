@@ -7,8 +7,11 @@ import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.exception.LinkExpiredException;
 import com.mrdanissimo.shortener_service.exception.LinkNotFoundException;
 import com.mrdanissimo.shortener_service.repository.LinkRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
@@ -19,10 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class LinkService {
     private static final String ALPHABET = "0123456789abcdefghijklmnopqrsABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -31,7 +32,29 @@ public class LinkService {
     private final SecureRandom random = new SecureRandom();
     private final LinkRepository linkRepository;
     private final KafkaTemplate<String, LinkClickedEvent> kafkaTemplate;
+    private final Counter linksClicksTotal;
+    private final Counter linksCreatedTotal;
+    private final Timer redirectTimer;
 
+    public LinkService(
+            LinkRepository linkRepository,
+            KafkaTemplate<String, LinkClickedEvent> kafkaTemplate,
+            MeterRegistry meterRegistry
+    ) {
+        this.linkRepository = linkRepository;
+        this.kafkaTemplate = kafkaTemplate;
+
+        this.linksClicksTotal = Counter.builder("links.clicks.total")
+                .description("Total number of link clicks")
+                .register(meterRegistry);
+
+        this.linksCreatedTotal = Counter.builder("links.created.total")
+                .description("Total number of created links")
+                .register(meterRegistry);
+        this.redirectTimer = Timer.builder("links.redirect.time")
+                .description("Time spent processing link redirects")
+                .register(meterRegistry);
+    }
     // Генерация строки
     private String generateUniqueShortCode() {
         String code;
@@ -56,6 +79,9 @@ public class LinkService {
         link.setCreatedAt(LocalDateTime.now());
 
         Link savedLink = linkRepository.save(link);
+
+        linksCreatedTotal.increment();
+
         return mapToResponse(savedLink);
     }
 
@@ -93,29 +119,48 @@ public class LinkService {
 
     @Transactional
     public String redirect(String shortCode, String userAgent) {
+        Timer.Sample sample = Timer.start();
+
         String originalUrl = getOriginalUrl(shortCode);
 
         linkRepository.incrementClicks(shortCode);
+
+        linksClicksTotal.increment();
+
+        String correlationId = MDC.get("correlationId");
 
         LinkClickedEvent event = new LinkClickedEvent(
                 shortCode,
                 originalUrl,
                 LocalDateTime.now(),
                 userAgent,
-                UUID.randomUUID().toString()
+                correlationId
         );
 
         try {
-            kafkaTemplate.send(TOPIC_LINK_CLICKS, shortCode, event);
-            log.info("Sent LinkClickedEvent to Kafka for shortCode: {}", shortCode);
+            kafkaTemplate.send(
+                    TOPIC_LINK_CLICKS,
+                    shortCode,
+                    event
+            );
+
+            log.info(
+                    "Sent LinkClickedEvent to Kafka for shortCode: {}",
+                    shortCode
+            );
+
         } catch (Exception e) {
-            log.error("Failed to send LinkClickedEvent to Kafka for shortCode: {}", shortCode, e);
+            log.error(
+                    "Failed to send LinkClickedEvent to Kafka for shortCode: {}",
+                    shortCode,
+                    e
+            );
         }
+
+        sample.stop(redirectTimer);
 
         return originalUrl;
     }
-
-
 
     private Link findLinkByShortCode(String shortCode) {
         return linkRepository.findByShortCode(shortCode)

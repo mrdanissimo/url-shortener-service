@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.MDC;
 import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.LocalDateTime;
@@ -74,22 +75,49 @@ class LinkServiceTest {
     @Test
     @DisplayName("Поиск по существующему shortCode возвращает ссылку")
     void redirect_WhenCodeExists_ShouldReturnUrlAndIncrementClicks() {
-        when(linkRepository.findByShortCode("HLP0N0")).thenReturn(Optional.of(sampleLink));
+        when(linkRepository.findByShortCode("HLPON0"))
+                .thenReturn(Optional.of(sampleLink));
 
-        String originalUrl = linkService.redirect("HLP0N0", "Mozilla/5.0");
+        MDC.put("correlationId", "test-123");
 
-        assertThat(originalUrl).isEqualTo("https://github.com");
-        assertThat(sampleLink.getClicks()).isEqualTo(1L);
-        verify(linkRepository, times(1)).findByShortCode("HLP0N0");
-        verify(linkRepository, times(1)).save(sampleLink);
+        try {
+            String originalUrl = linkService.redirect(
+                    "HLPON0",
+                    "Mozilla/5.0"
+            );
+
+            assertThat(originalUrl).isEqualTo("https://github.com");
+
+            verify(linkRepository, times(1))
+                    .findByShortCode("HLPON0");
+
+            verify(linkRepository, times(1))
+                    .incrementClicks("HLPON0");
+
+        } finally {
+            MDC.clear();
+        }
     }
 
     @Test
     @DisplayName("Поиск по несуществующему shortCode бросает LinkNotFoundException")
     void redirect_WhenCodeDoesNotExist_ShouldThrowLinkNotFoundException() {
-        when(linkRepository.findByShortCode("UNKNOWN")).thenReturn(Optional.empty());
+        when(linkRepository.findByShortCode("UNKNOWN"))
+                .thenReturn(Optional.empty());
 
-        assertThrows(LinkNotFoundException.class, () -> linkService.redirect("HLP0N0", "Mozilla/5.0"));
+        MDC.put("correlationId", "test-123");
+
+        try {
+            assertThrows(
+                    LinkNotFoundException.class,
+                    () -> linkService.redirect(
+                            "UNKNOWN",
+                            "Mozilla/5.0"
+                    )
+            );
+        } finally {
+            MDC.clear();
+        }
 
         verify(linkRepository, times(1)).findByShortCode("UNKNOWN");
     }

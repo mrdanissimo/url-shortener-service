@@ -1,55 +1,73 @@
 package com.mrdanissimo.shortener_service.exception;
 
+import com.mrdanissimo.shortener_service.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Обработка ошибки, когда ссылка не найдена
     @ExceptionHandler(LinkNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, String> handleNotFound(LinkNotFoundException ex) {
-        return Map.of("error", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleNotFound(LinkNotFoundException ex) {
+        return buildError(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage()
+        );
     }
 
-    // Обработка ошибки, когда срок ссылки истек
     @ExceptionHandler(LinkExpiredException.class)
-    @ResponseStatus(HttpStatus.GONE)
-    public Map<String, String> handleLinkExpired(LinkExpiredException ex) {
-        return Map.of("error", ex.getMessage());
+    public ResponseEntity<ErrorResponse> handleLinkExpired(LinkExpiredException ex) {
+        return buildError(
+                HttpStatus.GONE,
+                ex.getMessage()
+        );
     }
 
-    // Обработка ошибки, при неккоркектный вводе данных
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(
+            MethodArgumentNotValidException ex
+    ) {
         String errorMessage = ex.getBindingResult()
                 .getAllErrors()
                 .get(0)
                 .getDefaultMessage();
 
-        return Map.of("error", errorMessage != null ? errorMessage : "Некорректные данные");
+        return buildError(
+                HttpStatus.BAD_REQUEST,
+                errorMessage != null
+                        ? errorMessage
+                        : "Некорректные данные"
+        );
     }
 
-    // Обработка лимитов запросов
     @ExceptionHandler(RateLimitExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleRateLimit(RateLimitExceededException ex) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.TOO_MANY_REQUESTS.value());
-        body.put("error", "Too Many Requests");
-        body.put("message", ex.getMessage());
-
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(body);
+    public ResponseEntity<ErrorResponse> handleRateLimit(
+            RateLimitExceededException ex
+    ) {
+        return buildError(
+                HttpStatus.TOO_MANY_REQUESTS,
+                ex.getMessage()
+        );
     }
 
+    private ResponseEntity<ErrorResponse> buildError(
+            HttpStatus status,
+            String message
+    ) {
+        ErrorResponse response = new ErrorResponse(
+                LocalDateTime.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                message
+        );
+
+        return ResponseEntity
+                .status(status)
+                .body(response);
+    }
 }

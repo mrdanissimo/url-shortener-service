@@ -1,4 +1,11 @@
 package com.mrdanissimo.shortener_service.dto;
 
-public class ErrorResponse {
+import java.time.LocalDateTime;
+
+public record ErrorResponse(
+        LocalDateTime timestamp,
+        int status,
+        String error,
+        String message
+) {
 }

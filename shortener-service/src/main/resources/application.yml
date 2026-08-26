@@ -4,6 +4,7 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:REMOVED_SECRET}
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -11,21 +12,26 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+
   http:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-    cache:
-      type: redis
-      redis:
-        time-to-live: 600000
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -33,6 +39,12 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
 
 server:
   port: 8080
