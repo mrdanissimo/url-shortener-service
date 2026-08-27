@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: shortener-db
     environment:
-      POSTGRES_DB: shortener_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: REMOVED_SECRET
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -68,15 +68,15 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: shortener_db
-      DB_USER: postgres
-      DB_PASSWORD: REMOVED_SECRET
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      ANALYTICS_SERVICE_URL: http://analytics-service:8081
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      ANALYTICS_SERVICE_URL: ${ANALYTICS_SERVICE_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,12 +93,12 @@ services:
     ports:
       - "8081:8081"
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: shortener_db
-      DB_USER: postgres
-      DB_PASSWORD: REMOVED_SECRET
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
     depends_on:
       postgres:
         condition: service_healthy
