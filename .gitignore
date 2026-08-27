@@ -3,7 +3,10 @@ target/
 shortener-service/.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
+# Environment variables
+.env
+.env.*
+!.env.example
 ### STS ###
 .apt_generated
 .classpath
