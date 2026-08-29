@@ -1,44 +1,56 @@
 databaseChangeLog:
+
   - changeSet:
-      id: 1-create-links-table
+      id: 4-create-outbox-table
       author: daniil
       changes:
         - createTable:
-            tableName: links
+            tableName: outbox_events
             columns:
               - column:
                   name: id
-                  type: BIGINT
-                  autoIncrement: true
+                  type: UUID
                   constraints:
                     primaryKey: true
                     nullable: false
+
               - column:
-                  name: short_code
+                  name: aggregate_type
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: aggregate_id
                   type: VARCHAR(255)
                   constraints:
                     nullable: false
-                    unique: true
+
               - column:
-                  name: original_url
-                  type: VARCHAR(2048)
+                  name: event_type
+                  type: VARCHAR(100)
                   constraints:
                     nullable: false
+
               - column:
-                  name: clicks
-                  type: BIGINT
-                  defaultValueNumeric: 0
+                  name: payload
+                  type: TEXT
                   constraints:
                     nullable: false
+
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+
               - column:
                   name: created_at
                   type: TIMESTAMP
                   constraints:
                     nullable: false
+
               - column:
-                  name: expires_at
+                  name: sent_at
                   type: TIMESTAMP
-                  constraints:
-                    nullable: true
-  - include:
-      file: db/changelog/004-create-outbox-table.yaml

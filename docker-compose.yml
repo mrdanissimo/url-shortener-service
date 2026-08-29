@@ -59,6 +59,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - kafka_data:/var/lib/kafka/data
 
   shortener-service:
     build:
@@ -128,3 +130,4 @@ services:
 volumes:
   postgres_data:
   grafana_data:
+  kafka_data:

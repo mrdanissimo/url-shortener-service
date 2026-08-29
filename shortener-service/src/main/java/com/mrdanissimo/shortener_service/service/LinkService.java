@@ -1,5 +1,8 @@
 package com.mrdanissimo.shortener_service.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mrdanissimo.shortener_service.entity.OutboxEvent;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.entity.Link;
@@ -7,6 +10,7 @@ import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.exception.LinkExpiredException;
 import com.mrdanissimo.shortener_service.exception.LinkNotFoundException;
 import com.mrdanissimo.shortener_service.repository.LinkRepository;
+import com.mrdanissimo.shortener_service.repository.OutboxEventRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import io.micrometer.core.instrument.Counter;
@@ -15,7 +19,6 @@ import io.micrometer.core.instrument.Timer;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,18 +34,21 @@ public class LinkService {
     private static final String TOPIC_LINK_CLICKS = "link-clicks";
     private final SecureRandom random = new SecureRandom();
     private final LinkRepository linkRepository;
-    private final KafkaTemplate<String, LinkClickedEvent> kafkaTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+    private final ObjectMapper objectMapper;
     private final Counter linksClicksTotal;
     private final Counter linksCreatedTotal;
     private final Timer redirectTimer;
 
     public LinkService(
             LinkRepository linkRepository,
-            KafkaTemplate<String, LinkClickedEvent> kafkaTemplate,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            OutboxEventRepository outboxEventRepository,
+            ObjectMapper objectMapper
     ) {
         this.linkRepository = linkRepository;
-        this.kafkaTemplate = kafkaTemplate;
+        this.outboxEventRepository = outboxEventRepository;
+        this.objectMapper = objectMapper;
 
         this.linksClicksTotal = Counter.builder("links.clicks.total")
                 .description("Total number of link clicks")
@@ -138,21 +144,26 @@ public class LinkService {
         );
 
         try {
-            kafkaTemplate.send(
-                    TOPIC_LINK_CLICKS,
-                    shortCode,
-                    event
-            );
+            OutboxEvent outboxEvent = new OutboxEvent();
+
+            outboxEvent.setId(java.util.UUID.randomUUID());
+            outboxEvent.setAggregateType("LINK");
+            outboxEvent.setAggregateId(shortCode);
+            outboxEvent.setEventType("LINK_CLICKED");
+            outboxEvent.setPayload(objectMapper.writeValueAsString(event));
+            outboxEvent.setStatus("PENDING");
+            outboxEvent.setCreatedAt(LocalDateTime.now());
+
+            outboxEventRepository.save(outboxEvent);
 
             log.info(
-                    "Sent LinkClickedEvent to Kafka for shortCode: {}",
+                    "Link click saved to outbox for shortCode: {}",
                     shortCode
             );
 
-        } catch (Exception e) {
-            log.error(
-                    "Failed to send LinkClickedEvent to Kafka for shortCode: {}",
-                    shortCode,
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Failed to serialize LinkClickedEvent",
                     e
             );
         }
