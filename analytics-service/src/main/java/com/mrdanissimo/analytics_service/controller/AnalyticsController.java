@@ -1,9 +1,14 @@
 package com.mrdanissimo.analytics_service.controller;
 
+import com.mrdanissimo.analytics_service.dto.FailedClickEventResponse;
 import com.mrdanissimo.analytics_service.dto.LinkAnalyticsResponse;
 import com.mrdanissimo.analytics_service.repository.ClickEventRepository;
 import com.mrdanissimo.analytics_service.repository.FailedClickEventRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +27,25 @@ public class AnalyticsController {
     }
 
     @GetMapping("/failed")
-    public ResponseEntity<?> getFailedEvents() {
-        return ResponseEntity.ok(failedClickEventRepository.findAll());
+    public ResponseEntity<Page<FailedClickEventResponse>> getFailedEvents(
+            @PageableDefault(
+                    size = 20,
+                    sort = "clickedAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
+    ) {
+        Page<FailedClickEventResponse> events =
+                failedClickEventRepository.findAll(pageable)
+                        .map(event -> new FailedClickEventResponse(
+                                event.getId(),
+                                event.getShortCode(),
+                                event.getOriginalUrl(),
+                                event.getClickedAt(),
+                                event.getUserAgent(),
+                                event.getCorrelationId()
+                        ));
+
+        return ResponseEntity.ok(events);
     }
 }

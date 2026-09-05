@@ -23,8 +23,11 @@ public class Link {
     @Column(nullable = false, unique = true)
     private String shortCode;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 2048)
     private String originalUrl;
+
+    @Column(length = 255)
+    private String description;
 
     @Column(nullable = false)
     private Long clicks = 0L;

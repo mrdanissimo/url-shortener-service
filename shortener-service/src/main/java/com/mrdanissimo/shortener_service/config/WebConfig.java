@@ -15,7 +15,12 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/favicon.ico", "/error", "/swagger-ui/**", "/v3/api-docs/**");
+                .excludePathPatterns(
+                        "/actuator/**",
+                        "/favicon.ico",
+                        "/error",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**"
+                );
     }
-
 }

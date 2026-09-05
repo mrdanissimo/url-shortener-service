@@ -1,21 +1,24 @@
 package com.mrdanissimo.shortener_service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.entity.Link;
 import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.exception.LinkNotFoundException;
 import com.mrdanissimo.shortener_service.repository.LinkRepository;
+import com.mrdanissimo.shortener_service.repository.OutboxEventRepository;
+import com.mrdanissimo.shortener_service.service.LinkCacheService;
 import com.mrdanissimo.shortener_service.service.LinkService;
+import com.mrdanissimo.shortener_service.service.OutboxService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
-import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -31,16 +34,25 @@ class LinkServiceTest {
     @Mock
     private LinkRepository linkRepository;
 
-    @InjectMocks
+    @Mock
+    private LinkCacheService linkCacheService;
+
+    @Mock
+    private OutboxService outboxService;
+
     private LinkService linkService;
 
     private Link sampleLink;
 
-    @Mock
-    private KafkaTemplate<String, LinkClickedEvent> kafkaTemplate;
-
     @BeforeEach
     void setUp() {
+        linkService = new LinkService(
+                linkRepository,
+                linkCacheService,
+                outboxService,
+                new SimpleMeterRegistry()
+        );
+
         sampleLink = new Link();
         sampleLink.setId(1L);
         sampleLink.setOriginalUrl("https://github.com");
@@ -75,8 +87,9 @@ class LinkServiceTest {
     @Test
     @DisplayName("Поиск по существующему shortCode возвращает ссылку")
     void redirect_WhenCodeExists_ShouldReturnUrlAndIncrementClicks() {
-        when(linkRepository.findByShortCode("HLPON0"))
-                .thenReturn(Optional.of(sampleLink));
+
+        when(linkCacheService.getOriginalUrl("HLPON0"))
+                .thenReturn("https://github.com");
 
         MDC.put("correlationId", "test-123");
 
@@ -88,11 +101,11 @@ class LinkServiceTest {
 
             assertThat(originalUrl).isEqualTo("https://github.com");
 
-            verify(linkRepository, times(1))
-                    .findByShortCode("HLPON0");
+            verify(linkRepository).incrementClicks("HLPON0");
 
-            verify(linkRepository, times(1))
-                    .incrementClicks("HLPON0");
+            verify(outboxService).saveLinkClickedEvent(
+                    any(LinkClickedEvent.class)
+            );
 
         } finally {
             MDC.clear();
@@ -102,8 +115,8 @@ class LinkServiceTest {
     @Test
     @DisplayName("Поиск по несуществующему shortCode бросает LinkNotFoundException")
     void redirect_WhenCodeDoesNotExist_ShouldThrowLinkNotFoundException() {
-        when(linkRepository.findByShortCode("UNKNOWN"))
-                .thenReturn(Optional.empty());
+        when(linkCacheService.getOriginalUrl("UNKNOWN"))
+                .thenThrow(new LinkNotFoundException("UNKNOWN"));
 
         MDC.put("correlationId", "test-123");
 
@@ -118,7 +131,5 @@ class LinkServiceTest {
         } finally {
             MDC.clear();
         }
-
-        verify(linkRepository, times(1)).findByShortCode("UNKNOWN");
     }
 }

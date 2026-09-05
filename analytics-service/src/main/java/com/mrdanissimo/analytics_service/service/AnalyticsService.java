@@ -5,6 +5,7 @@ import com.mrdanissimo.analytics_service.event.LinkClickedEvent;
 import com.mrdanissimo.analytics_service.repository.ClickEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,8 +16,13 @@ public class AnalyticsService {
     private final ClickEventRepository repository;
 
     public void saveClickEvent(LinkClickedEvent event) {
-        if ("error".equals(event.shortCode())) {
-            throw new RuntimeException("Simulated processing error for DLQ test");
+        if (event.correlationId() == null || event.correlationId().isBlank()) {
+            throw new IllegalArgumentException("Click event must contain correlationId");
+        }
+
+        if (repository.existsByCorrelationId(event.correlationId())) {
+            log.info("Duplicate click event skipped: correlationId={}", event.correlationId());
+            return;
         }
 
         ClickEvent entity = ClickEvent.builder()
@@ -27,7 +33,17 @@ public class AnalyticsService {
                 .correlationId(event.correlationId())
                 .build();
 
-        repository.save(entity);
-        log.info("Successfully saved click event for shortCode: {}", event.shortCode());
+        try {
+            repository.saveAndFlush(entity);
+            log.info("Successfully saved click event for shortCode: {}", event.shortCode());
+        } catch (DataIntegrityViolationException exception) {
+            // A concurrent consumer may insert the same correlationId after the check above.
+            if (repository.existsByCorrelationId(event.correlationId())) {
+                log.info("Duplicate click event skipped: correlationId={}", event.correlationId());
+                return;
+            }
+
+            throw exception;
+        }
     }
 }

@@ -21,5 +21,5 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
     @Modifying
     @Transactional
     @Query("UPDATE Link l SET l.clicks = l.clicks + 1 WHERE l.shortCode = :shortCode")
-    void incrementClicks(@Param("shortCode") String shortCode);
+    int incrementClicks(@Param("shortCode") String shortCode);
 }

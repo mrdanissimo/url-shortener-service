@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: 5-add-click-events-short-code-index
+      author: mrdanissimo
+      changes:
+        - createIndex:
+            tableName: click_events
+            indexName: idx_click_events_short_code
+            columns:
+              - column:
+                  name: short_code

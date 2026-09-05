@@ -1,0 +1,15 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 4-increase-original-url-length
+      author: mrdanissimo
+      changes:
+        - modifyDataType:
+            tableName: click_events
+            columnName: original_url
+            newDataType: VARCHAR(2048)
+
+        - modifyDataType:
+            tableName: failed_click_events
+            columnName: original_url
+            newDataType: VARCHAR(2048)

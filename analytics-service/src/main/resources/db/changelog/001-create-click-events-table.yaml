@@ -1,0 +1,36 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1-create-click-events-table
+      author: mrdanissimo
+      logicalFilePath: db/changelog/db.changelog-master.yml
+      changes:
+        - createTable:
+            tableName: click_events
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: short_code
+                  type: VARCHAR(255)
+
+              - column:
+                  name: original_url
+                  type: VARCHAR(255)
+
+              - column:
+                  name: clicked_at
+                  type: TIMESTAMP
+
+              - column:
+                  name: user_agent
+                  type: VARCHAR(255)
+
+              - column:
+                  name: correlation_id
+                  type: VARCHAR(255)

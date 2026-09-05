@@ -1,0 +1,12 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 6-add-description
+      author: daniil
+      changes:
+        - addColumn:
+            tableName: links
+            columns:
+              - column:
+                  name: description
+                  type: VARCHAR(255)

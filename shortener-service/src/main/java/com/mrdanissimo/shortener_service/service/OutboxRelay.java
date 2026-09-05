@@ -1,5 +1,6 @@
 package com.mrdanissimo.shortener_service.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mrdanissimo.shortener_service.entity.OutboxEvent;
@@ -11,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,9 +45,25 @@ public class OutboxRelay {
                 outboxEventRepository.findTop100ByStatusOrderByCreatedAtAsc("PENDING");
 
         for (OutboxEvent event : events) {
-            try {
-                JsonNode payload = objectMapper.readTree(event.getPayload());
 
+            JsonNode payload;
+
+            try {
+                payload = objectMapper.readTree(event.getPayload());
+            } catch (JsonProcessingException e) {
+                event.setStatus("FAILED");
+                outboxEventRepository.save(event);
+
+                log.error(
+                        "Invalid JSON in outbox event {}, marked as FAILED",
+                        event.getId(),
+                        e
+                );
+
+                continue;
+            }
+
+            try {
                 kafkaTemplate.send(
                         "link-clicks",
                         event.getAggregateId(),
@@ -64,7 +82,7 @@ public class OutboxRelay {
 
             } catch (Exception e) {
                 log.error(
-                        "Failed to send outbox event {}",
+                        "Failed to send outbox event {} to Kafka, keeping PENDING",
                         event.getId(),
                         e
                 );
@@ -73,5 +91,20 @@ public class OutboxRelay {
 
         long count = outboxEventRepository.countByStatus("PENDING");
         pendingCount.set(count);
+    }
+
+    @Scheduled(fixedDelay = 86400000)
+    @Transactional
+    public void cleanupSentEvents() {
+
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
+
+        long deleted = outboxEventRepository
+                .deleteByStatusAndSentAtBefore("SENT", cutoff);
+
+        log.info(
+                "Deleted {} sent outbox events older than 7 days",
+                deleted
+        );
     }
 }

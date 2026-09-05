@@ -6,7 +6,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.kafka.annotation.BackOff;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.stereotype.Component;
@@ -31,8 +31,7 @@ public class ClickEventConsumer {
 
     @RetryableTopic(
             attempts = "3",
-            backOff = @BackOff(delay = 1000, multiplier = 2.0),
-            dltTopicSuffix = "-dead-letter"
+            backoff = @Backoff(delay = 1000, multiplier = 2.0)
     )
     @KafkaListener(topics = "link-clicks", groupId = "analytics-group")
     public void consume(LinkClickedEvent event) {

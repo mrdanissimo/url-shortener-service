@@ -19,8 +19,13 @@ public class ClickEvent {
     private Long id;
 
     private String shortCode;
+
+    @Column(length = 2048)
     private String originalUrl;
+
     private LocalDateTime clickedAt;
+
     private String userAgent;
+
     private String correlationId;
 }

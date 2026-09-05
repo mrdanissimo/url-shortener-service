@@ -6,6 +6,7 @@ import com.mrdanissimo.shortener_service.entity.OutboxEvent;
 import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OutboxService {
 
     private final OutboxEventRepository outboxEventRepository;
@@ -26,14 +28,24 @@ public class OutboxService {
             outboxEvent.setAggregateType("LINK");
             outboxEvent.setAggregateId(event.shortCode());
             outboxEvent.setEventType("LINK_CLICKED");
-            outboxEvent.setPayload(objectMapper.writeValueAsString(event));
+            outboxEvent.setPayload(
+                    objectMapper.writeValueAsString(event)
+            );
             outboxEvent.setStatus("PENDING");
             outboxEvent.setCreatedAt(LocalDateTime.now());
 
             outboxEventRepository.save(outboxEvent);
 
+            log.info(
+                    "Link click saved to outbox for shortCode: {}",
+                    event.shortCode()
+            );
+
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Ошибка сериализации LinkClickedEvent", e);
+            throw new IllegalStateException(
+                    "Failed to serialize LinkClickedEvent",
+                    e
+            );
         }
     }
 }

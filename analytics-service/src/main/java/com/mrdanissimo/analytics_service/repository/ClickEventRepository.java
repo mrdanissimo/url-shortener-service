@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ClickEventRepository extends JpaRepository<ClickEvent, Long> {
     long countByShortCode(String shortCode);
+
+    boolean existsByCorrelationId(String correlationId);
 }

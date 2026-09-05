@@ -1,0 +1,14 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 5-add-outbox-status-created-at-index
+      author: daniil
+      changes:
+        - createIndex:
+            tableName: outbox_events
+            indexName: idx_outbox_events_status_created_at
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at

@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3-add-unique-constraint-to-click-events-correlation-id
+      author: mrdanissimo
+      logicalFilePath: db/changelog/db.changelog-master.yml
+      changes:
+        - addUniqueConstraint:
+            tableName: click_events
+            columnNames: correlation_id
+            constraintName: uk_click_events_correlation_id

@@ -1,44 +1,13 @@
 databaseChangeLog:
-  - changeSet:
-      id: 1-create-links-table
-      author: daniil
-      changes:
-        - createTable:
-            tableName: links
-            columns:
-              - column:
-                  name: id
-                  type: BIGINT
-                  autoIncrement: true
-                  constraints:
-                    primaryKey: true
-                    nullable: false
-              - column:
-                  name: short_code
-                  type: VARCHAR(255)
-                  constraints:
-                    nullable: false
-                    unique: true
-              - column:
-                  name: original_url
-                  type: VARCHAR(2048)
-                  constraints:
-                    nullable: false
-              - column:
-                  name: clicks
-                  type: BIGINT
-                  defaultValueNumeric: 0
-                  constraints:
-                    nullable: false
-              - column:
-                  name: created_at
-                  type: TIMESTAMP
-                  constraints:
-                    nullable: false
-              - column:
-                  name: expires_at
-                  type: TIMESTAMP
-                  constraints:
-                    nullable: true
+
+  - include:
+      file: db/changelog/001-create-links-table.yaml
+
   - include:
       file: db/changelog/004-create-outbox-table.yaml
+
+  - include:
+      file: db/changelog/005-add-outbox-index.yaml
+
+  - include:
+      file: db/changelog/006-add-description.yaml
