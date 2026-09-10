@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,7 +32,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
     healthcheck:
       test: [ "CMD-SHELL", "nc -z localhost 2181" ]
       interval: 10s
@@ -43,7 +43,7 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: shortener-kafka
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
       dockerfile: Dockerfile
     container_name: shortener-app
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -97,7 +97,7 @@ services:
       dockerfile: Dockerfile
     container_name: analytics-app
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -115,7 +115,7 @@ services:
     image: prom/prometheus:latest
     container_name: shortener-prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
@@ -126,7 +126,7 @@ services:
     image: grafana/grafana:latest
     container_name: shortener-grafana
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - prometheus
     volumes:
