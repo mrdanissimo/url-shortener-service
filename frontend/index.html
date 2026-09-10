@@ -267,14 +267,12 @@
 <script>
     let currentShortCode = '';
 
-    // 1. Запрос на создание короткой ссылки
     async function shortenUrl() {
         const input = document.getElementById('originalUrl');
         const urlValue = input.value.trim();
         const errorBox = document.getElementById('errorBox');
         const resultBox = document.getElementById('resultBox');
 
-        // Сбрасываем отображение
         errorBox.classList.remove('active');
         resultBox.classList.remove('active');
 
@@ -284,10 +282,7 @@
         }
 
         try {
-            // КУДА ИДЁТ ЗАПРОС: http://localhost:8080/api/links
-            // МЕТОД: POST
-            // ТЕЛО: {"originalUrl": "..."}
-            const response = await fetch('http://localhost:8080/api/links', {
+            const response = await fetch('/api/links', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -298,18 +293,20 @@
             const data = await response.json();
 
             if (!response.ok) {
-                // Если статус 400 Bad Request (например, невалидный URL)
                 throw new Error(data.error || "Произошла ошибка при сокращении");
             }
 
             currentShortCode = data.shortCode;
-            const fullShortUrl = `http://localhost:8080/${data.shortCode}`;
+
+            const fullShortUrl = `${window.location.origin}/${data.shortCode}`;
 
             const linkElement = document.getElementById('shortLink');
             linkElement.href = fullShortUrl;
             linkElement.textContent = fullShortUrl;
 
-            document.getElementById('clickCount').textContent = data.clickCount ?? data.clicks ?? 0;
+            document.getElementById('clickCount').textContent =
+                data.clickCount ?? data.clicks ?? 0;
+
             resultBox.classList.add('active');
 
         } catch (err) {
@@ -317,29 +314,23 @@
         }
     }
 
-    // 2. Запрос на получение статистики кликов
     async function fetchStats() {
         if (!currentShortCode) return;
 
         try {
-            // КУДА ИДЁТ ЗАПРОС: http://localhost:8080/api/links/{shortCode}/stats
-            // МЕТОД: GET
-            const response = await fetch(`http://localhost:8080/api/links/${currentShortCode}/stats`);
+            const response =
+                await fetch(`/api/links/${currentShortCode}/stats`);
+
             const data = await response.json();
 
             if (response.ok) {
-                // Обновляем кол-во кликов на странице
-                document.getElementById('clickCount').textContent = data.clickCount ?? data.clicks ?? 0;
+                document.getElementById('clickCount').textContent =
+                    data.clickCount ?? data.clicks ?? 0;
             }
+
         } catch (err) {
             console.error("Не удалось обновить статистику", err);
         }
-    }
-
-    function showError(message) {
-        const errorBox = document.getElementById('errorBox');
-        errorBox.textContent = message;
-        errorBox.classList.add('active');
     }
 </script>
 
