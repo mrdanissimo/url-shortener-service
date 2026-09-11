@@ -1,16 +1,13 @@
 package com.mrdanissimo.shortener_service.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mrdanissimo.shortener_service.dto.CachedLink;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.entity.Link;
-import com.mrdanissimo.shortener_service.entity.OutboxEvent;
 import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.exception.LinkExpiredException;
 import com.mrdanissimo.shortener_service.exception.LinkNotFoundException;
 import com.mrdanissimo.shortener_service.repository.LinkRepository;
-import com.mrdanissimo.shortener_service.repository.OutboxEventRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -24,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -88,7 +84,6 @@ public class LinkService {
         return mapToResponse(findLinkByShortCode(shortCode));
     }
 
-    @Cacheable(value = "linkInfo", key = "#shortCode")
     public LinkResponse getLinkInfo(String shortCode) {
         Link link = linkRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new LinkNotFoundException(shortCode));
@@ -97,10 +92,7 @@ public class LinkService {
     }
 
     @Transactional
-    @Caching(evict = {
-            @CacheEvict(value = "linkInfo", key = "#shortCode"),
-            @CacheEvict(value = "originalUrls", key = "#shortCode")
-    })
+    @CacheEvict(value = "originalUrls", key = "#shortCode")
     public void deleteLink(String shortCode) {
         if (!linkRepository.existsByShortCode(shortCode)) {
             throw new LinkNotFoundException(shortCode);
@@ -114,7 +106,14 @@ public class LinkService {
         Timer.Sample sample = Timer.start();
 
         try {
-            String originalUrl = linkCacheService.getOriginalUrl(shortCode);
+            CachedLink link = linkCacheService.getLink(shortCode);
+
+            if (link.expiresAt() != null
+                    && link.expiresAt().isBefore(LocalDateTime.now())) {
+                throw new LinkExpiredException("Срок действия ссылки истек");
+            }
+
+            String originalUrl = link.originalUrl();
 
             incrementClicks(shortCode);
             linksClicksTotal.increment();

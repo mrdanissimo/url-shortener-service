@@ -1,4 +1,9 @@
 package com.mrdanissimo.shortener_service.dto;
 
-public class CachedLink {
+import java.time.LocalDateTime;
+
+public record CachedLink(
+        String originalUrl,
+        LocalDateTime expiresAt
+) {
 }

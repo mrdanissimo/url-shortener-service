@@ -2,6 +2,7 @@ package com.mrdanissimo.shortener_service.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.mrdanissimo.shortener_service.dto.CachedLink;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -31,10 +32,14 @@ public class CacheConfig implements CachingConfigurer {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        StringRedisSerializer stringSerializer =
+                new StringRedisSerializer();
 
-        Jackson2JsonRedisSerializer<LinkResponse> linkResponseSerializer =
-                new Jackson2JsonRedisSerializer<>(objectMapper, LinkResponse.class);
+        Jackson2JsonRedisSerializer<CachedLink> cachedLinkSerializer =
+                new Jackson2JsonRedisSerializer<>(
+                        objectMapper,
+                        CachedLink.class
+                );
 
         RedisCacheConfiguration originalUrlsConfig =
                 RedisCacheConfiguration.defaultCacheConfig()
@@ -47,22 +52,7 @@ public class CacheConfig implements CachingConfigurer {
                         )
                         .serializeValuesWith(
                                 RedisSerializationContext.SerializationPair.fromSerializer(
-                                        stringSerializer
-                                )
-                        );
-
-        RedisCacheConfiguration linkInfoConfig =
-                RedisCacheConfiguration.defaultCacheConfig()
-                        .entryTtl(Duration.ofHours(1))
-                        .disableCachingNullValues()
-                        .serializeKeysWith(
-                                RedisSerializationContext.SerializationPair.fromSerializer(
-                                        stringSerializer
-                                )
-                        )
-                        .serializeValuesWith(
-                                RedisSerializationContext.SerializationPair.fromSerializer(
-                                        linkResponseSerializer
+                                        cachedLinkSerializer
                                 )
                         );
 
@@ -70,8 +60,7 @@ public class CacheConfig implements CachingConfigurer {
                 .cacheDefaults(originalUrlsConfig)
                 .withInitialCacheConfigurations(
                         java.util.Map.of(
-                                "originalUrls", originalUrlsConfig,
-                                "linkInfo", linkInfoConfig
+                                "originalUrls", originalUrlsConfig
                         )
                 )
                 .build();

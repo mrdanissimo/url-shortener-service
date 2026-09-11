@@ -1,13 +1,12 @@
 package com.mrdanissimo.shortener_service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mrdanissimo.shortener_service.dto.CachedLink;
 import com.mrdanissimo.shortener_service.dto.CreateLinkRequest;
 import com.mrdanissimo.shortener_service.dto.LinkResponse;
 import com.mrdanissimo.shortener_service.entity.Link;
 import com.mrdanissimo.shortener_service.event.LinkClickedEvent;
 import com.mrdanissimo.shortener_service.exception.LinkNotFoundException;
 import com.mrdanissimo.shortener_service.repository.LinkRepository;
-import com.mrdanissimo.shortener_service.repository.OutboxEventRepository;
 import com.mrdanissimo.shortener_service.service.LinkCacheService;
 import com.mrdanissimo.shortener_service.service.LinkService;
 import com.mrdanissimo.shortener_service.service.OutboxService;
@@ -21,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -88,8 +86,11 @@ class LinkServiceTest {
     @DisplayName("Поиск по существующему shortCode возвращает ссылку")
     void redirect_WhenCodeExists_ShouldReturnUrlAndIncrementClicks() {
 
-        when(linkCacheService.getOriginalUrl("HLPON0"))
-                .thenReturn("https://github.com");
+        when(linkCacheService.getLink("HLPON0"))
+                .thenReturn(new CachedLink(
+                        "https://github.com",
+                        null
+                ));
 
         MDC.put("correlationId", "test-123");
 
@@ -115,7 +116,7 @@ class LinkServiceTest {
     @Test
     @DisplayName("Поиск по несуществующему shortCode бросает LinkNotFoundException")
     void redirect_WhenCodeDoesNotExist_ShouldThrowLinkNotFoundException() {
-        when(linkCacheService.getOriginalUrl("UNKNOWN"))
+        when(linkCacheService.getLink("UNKNOWN"))
                 .thenThrow(new LinkNotFoundException("UNKNOWN"));
 
         MDC.put("correlationId", "test-123");
