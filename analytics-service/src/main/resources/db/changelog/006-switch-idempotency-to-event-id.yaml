@@ -1,0 +1,35 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 6-switch-idempotency-to-event-id
+      author: mrdanissimo
+      logicalFilePath: db/changelog/db.changelog-master.yml
+
+      changes:
+
+        - addColumn:
+            tableName: click_events
+            columns:
+              - column:
+                  name: event_id
+                  type: UUID
+
+        - sql:
+            sql: |
+              UPDATE click_events
+              SET event_id = gen_random_uuid()
+              WHERE event_id IS NULL;
+
+        - addNotNullConstraint:
+            tableName: click_events
+            columnName: event_id
+            columnDataType: UUID
+
+        - addUniqueConstraint:
+            tableName: click_events
+            columnNames: event_id
+            constraintName: uk_click_events_event_id
+
+        - dropUniqueConstraint:
+            tableName: click_events
+            constraintName: uk_click_events_correlation_id

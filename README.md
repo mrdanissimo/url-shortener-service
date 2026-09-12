@@ -4,9 +4,9 @@
 
 ## 🌐 Live Demo
 
-- **Frontend:** http://91.186.199.219/
-- **Swagger:** http://91.186.199.219:8080/swagger-ui/index.html
-- **Grafana:** http://91.186.199.219:3000
+- **Frontend:** http://94.228.126.148/
+- **Swagger:** http://94.228.126.148/:8080/swagger-ui/index.html
+- **Grafana:** http://94.228.126.148/:3000
 
 ## 🛠 Стек
 

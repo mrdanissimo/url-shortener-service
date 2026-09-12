@@ -1,19 +1,18 @@
 package com.mrdanissimo.analytics_service;
 
-import com.mrdanissimo.analytics_service.entity.ClickEvent;
 import com.mrdanissimo.analytics_service.event.LinkClickedEvent;
 import com.mrdanissimo.analytics_service.repository.ClickEventRepository;
 import com.mrdanissimo.analytics_service.service.AnalyticsService;
+import com.mrdanissimo.analytics_service.service.ClickEventPersistenceService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -26,12 +25,19 @@ class AnalyticsServiceTest {
     @Mock
     private ClickEventRepository repository;
 
+    @Mock
+    private ClickEventPersistenceService persistenceService;
+
     @InjectMocks
     private AnalyticsService analyticsService;
 
     @Test
     void saveClickEvent_savesEventToRepository() {
+
+        UUID eventId = UUID.randomUUID();
+
         LinkClickedEvent event = new LinkClickedEvent(
+                eventId,
                 "abc123",
                 "https://example.com",
                 LocalDateTime.now(),
@@ -41,22 +47,17 @@ class AnalyticsServiceTest {
 
         analyticsService.saveClickEvent(event);
 
-        ArgumentCaptor<ClickEvent> captor =
-                ArgumentCaptor.forClass(ClickEvent.class);
-
-        verify(repository).saveAndFlush(captor.capture());
-
-        ClickEvent savedEvent = captor.getValue();
-
-        assertEquals("abc123", savedEvent.getShortCode());
-        assertEquals("https://example.com", savedEvent.getOriginalUrl());
-        assertEquals("JUnit", savedEvent.getUserAgent());
-        assertEquals("test-001", savedEvent.getCorrelationId());
+        verify(persistenceService).save(event);
     }
 
     @Test
     void saveClickEvent_sameShortCode_savesBothEvents() {
+
+        UUID firstEventId = UUID.randomUUID();
+        UUID secondEventId = UUID.randomUUID();
+
         LinkClickedEvent firstEvent = new LinkClickedEvent(
+                firstEventId,
                 "abc123",
                 "https://example.com",
                 LocalDateTime.now(),
@@ -65,6 +66,7 @@ class AnalyticsServiceTest {
         );
 
         LinkClickedEvent secondEvent = new LinkClickedEvent(
+                secondEventId,
                 "abc123",
                 "https://example.com",
                 LocalDateTime.now(),
@@ -75,22 +77,62 @@ class AnalyticsServiceTest {
         analyticsService.saveClickEvent(firstEvent);
         analyticsService.saveClickEvent(secondEvent);
 
-        verify(repository, times(2)).saveAndFlush(any(ClickEvent.class));
+        verify(persistenceService, times(2))
+                .save(any(LinkClickedEvent.class));
     }
 
     @Test
-    void saveClickEvent_duplicateCorrelationId_skipsEvent() {
+    void saveClickEvent_duplicateEventId_skipsEvent() {
+
+        UUID eventId = UUID.randomUUID();
+
         LinkClickedEvent event = new LinkClickedEvent(
+                eventId,
                 "abc123",
                 "https://example.com",
                 LocalDateTime.now(),
                 "JUnit",
                 "duplicate-001"
         );
-        when(repository.existsByCorrelationId("duplicate-001")).thenReturn(true);
+
+        when(repository.existsByEventId(eventId)).thenReturn(true);
 
         analyticsService.saveClickEvent(event);
 
-        verify(repository, never()).saveAndFlush(any(ClickEvent.class));
+        verify(persistenceService, never())
+                .save(any(LinkClickedEvent.class));
+    }
+
+    @Test
+    void saveClickEvent_sameCorrelationId_differentEventIds_savesBothEvents() {
+
+        UUID firstEventId = UUID.randomUUID();
+        UUID secondEventId = UUID.randomUUID();
+
+        String correlationId = "same-correlation-id";
+
+        LinkClickedEvent firstEvent = new LinkClickedEvent(
+                firstEventId,
+                "abc123",
+                "https://example.com",
+                LocalDateTime.now(),
+                "JUnit",
+                correlationId
+        );
+
+        LinkClickedEvent secondEvent = new LinkClickedEvent(
+                secondEventId,
+                "abc123",
+                "https://example.com",
+                LocalDateTime.now(),
+                "JUnit",
+                correlationId
+        );
+
+        analyticsService.saveClickEvent(firstEvent);
+        analyticsService.saveClickEvent(secondEvent);
+
+        verify(persistenceService, times(2))
+                .save(any(LinkClickedEvent.class));
     }
 }

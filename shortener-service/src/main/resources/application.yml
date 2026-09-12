@@ -44,7 +44,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,beans,caches
+        include: health,info,prometheus
 
 server:
   port: 8080

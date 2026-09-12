@@ -141,7 +141,7 @@ public class LinkService {
         }
     }
 
-    public void incrementClicks(String shortCode) {
+    private void incrementClicks(String shortCode) {
         linkRepository.incrementClicks(shortCode);
     }
 

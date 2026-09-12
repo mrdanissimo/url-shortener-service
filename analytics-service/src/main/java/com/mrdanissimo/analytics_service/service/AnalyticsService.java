@@ -14,32 +14,34 @@ import org.springframework.stereotype.Service;
 public class AnalyticsService {
 
     private final ClickEventRepository repository;
+    private final ClickEventPersistenceService persistenceService;
 
     public void saveClickEvent(LinkClickedEvent event) {
-        if (event.correlationId() == null || event.correlationId().isBlank()) {
-            throw new IllegalArgumentException("Click event must contain correlationId");
+
+        if (event.eventId() == null) {
+            throw new IllegalArgumentException("Click event must contain eventId");
         }
 
-        if (repository.existsByCorrelationId(event.correlationId())) {
-            log.info("Duplicate click event skipped: correlationId={}", event.correlationId());
+        if (repository.existsByEventId(event.eventId())) {
+            log.info("Duplicate click event skipped: eventId={}", event.eventId());
             return;
         }
 
-        ClickEvent entity = ClickEvent.builder()
-                .shortCode(event.shortCode())
-                .originalUrl(event.originalUrl())
-                .clickedAt(event.clickedAt())
-                .userAgent(event.userAgent())
-                .correlationId(event.correlationId())
-                .build();
-
         try {
-            repository.saveAndFlush(entity);
-            log.info("Successfully saved click event for shortCode: {}", event.shortCode());
+            persistenceService.save(event);
+
+            log.info(
+                    "Successfully saved click event for shortCode: {}",
+                    event.shortCode()
+            );
+
         } catch (DataIntegrityViolationException exception) {
-            // A concurrent consumer may insert the same correlationId after the check above.
-            if (repository.existsByCorrelationId(event.correlationId())) {
-                log.info("Duplicate click event skipped: correlationId={}", event.correlationId());
+
+            if (repository.existsByEventId(event.eventId())) {
+                log.info(
+                        "Duplicate click event skipped: eventId={}",
+                        event.eventId()
+                );
                 return;
             }
 
