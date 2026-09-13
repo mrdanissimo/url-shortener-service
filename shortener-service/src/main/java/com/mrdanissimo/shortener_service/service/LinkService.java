@@ -14,13 +14,12 @@ import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -125,6 +124,7 @@ public class LinkService {
             );
 
             LinkClickedEvent event = new LinkClickedEvent(
+                    UUID.randomUUID(),
                     shortCode,
                     originalUrl,
                     LocalDateTime.now(),

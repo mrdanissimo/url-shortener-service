@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
@@ -104,9 +105,18 @@ class LinkServiceTest {
 
             verify(linkRepository).incrementClicks("HLPON0");
 
-            verify(outboxService).saveLinkClickedEvent(
-                    any(LinkClickedEvent.class)
-            );
+            ArgumentCaptor<LinkClickedEvent> captor =
+                    ArgumentCaptor.forClass(LinkClickedEvent.class);
+
+            verify(outboxService).saveLinkClickedEvent(captor.capture());
+
+            LinkClickedEvent event = captor.getValue();
+
+            assertThat(event.eventId()).isNotNull();
+            assertThat(event.shortCode()).isEqualTo("HLPON0");
+            assertThat(event.originalUrl()).isEqualTo("https://github.com");
+            assertThat(event.userAgent()).isEqualTo("Mozilla/5.0");
+            assertThat(event.correlationId()).isEqualTo("test-123");
 
         } finally {
             MDC.clear();
